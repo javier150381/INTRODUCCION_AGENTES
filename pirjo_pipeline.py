@@ -114,19 +114,35 @@ def analista_de_fuentes(
 
 
 def metodologo_pirjo(bullets: str) -> Dict[str, str]:
-    """Transform bullets into PIRJO blocks."""
-    prompt = (
-        "Convierte las viñetas siguientes en bloques PIRJO. Cada bloque debe contener 2-3 "
-        "oraciones claras. Responde estrictamente en JSON con las claves P, I, R, J, O.\n\n"
-        f"Viñetas:\n{bullets}"
-    )
-    content = _call_openai(prompt, system="Agente Metodólogo PIRJO")
-    try:
-        blocks = json.loads(content)
-    except json.JSONDecodeError:
-        # if parsing fails, return content under a generic key
-        blocks = {"error": content}
-    return blocks
+    """Transform bullets into PIRJO blocks with individual JSON calls.
+
+    Each block (P, I, R, J y O) is requested separately from the language
+    model, which must respond with a JSON object containing only the
+    corresponding key. The resulting values are gathered into a single
+    dictionary for downstream use.
+    """
+
+    bloques = {
+        "P": "Problema",
+        "I": "Información relevante",
+        "R": "Restricción o brecha",
+        "J": "Justificación",
+        "O": "Objetivo",
+    }
+    results: Dict[str, str] = {}
+    for clave, nombre in bloques.items():
+        prompt = (
+            f"Convierte las viñetas siguientes en el bloque {clave} ({nombre}) con 2-3 "
+            f"oraciones claras. Responde estrictamente en JSON con la clave \"{clave}\".\n\n"
+            f"Viñetas:\n{bullets}"
+        )
+        content = _call_openai(prompt, system="Agente Metodólogo PIRJO")
+        try:
+            parsed = json.loads(content)
+            results[clave] = parsed.get(clave, content)
+        except json.JSONDecodeError:
+            results[clave] = content
+    return results
 
 
 def redactor_academico(blocks: Dict[str, str]) -> str:
