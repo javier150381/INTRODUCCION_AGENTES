@@ -2,10 +2,12 @@ import json
 import os
 from typing import List, Dict
 
-import openai
+from openai import OpenAI
 from PyPDF2 import PdfReader
 
 from openai_utils import ensure_openai_api_key
+
+client = OpenAI()
 
 
 def _call_openai(prompt: str, system: str = "") -> str:
@@ -14,8 +16,8 @@ def _call_openai(prompt: str, system: str = "") -> str:
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
-    response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=messages)
-    return response["choices"][0]["message"]["content"].strip()
+    response = client.chat.completions.create(model="gpt-3.5-turbo", messages=messages)
+    return response.choices[0].message.content.strip()
 
 
 def extract_sources(files: List[str]) -> List[Dict[str, str]]:
