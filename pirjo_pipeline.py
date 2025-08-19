@@ -89,7 +89,11 @@ def analista_de_fuentes(title: str, chunks: List[Dict[str, str]]) -> str:
     for c in chunks:
         if not c["text"].strip():
             continue
-        fragment = f"[{c['file']}:{c['page']}:{c['chunk_id']}]\n{c['text']}\n\n"
+        # ``search_index`` may return metadata with either ``chunk_id`` or
+        # ``chunk`` as the identifier field. Support both to avoid ``KeyError``
+        # when the caller provides one or the other.
+        chunk_label = c.get("chunk_id", c.get("chunk", ""))
+        fragment = f"[{c['file']}:{c['page']}:{chunk_label}]\n{c['text']}\n\n"
         frag_tokens = len(encoding.encode(fragment))
         if token_count + frag_tokens > max_tokens:
             break
