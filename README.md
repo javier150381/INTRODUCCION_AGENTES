@@ -48,7 +48,7 @@ Ejecuta la aplicación Gradio:
 python main.py
 ```
 
-La interfaz permite ingresar el título del trabajo, subir archivos PDF y obtener la introducción final, los bloques PIRJO intermedios y la lista de documentos procesados.
+La interfaz permite ingresar el título del trabajo, el objetivo, un breve resumen y subir archivos PDF para obtener la introducción final, los bloques PIRJO intermedios y la lista de documentos procesados.
 
 ## Pruebas
 
