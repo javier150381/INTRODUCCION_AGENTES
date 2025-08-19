@@ -1,5 +1,6 @@
 # INTRODUCCION_AGENTES
 
+
 Este proyecto requiere la variable de entorno `OPENAI_API_KEY` para acceder a la API de OpenAI.
 
 ## Configuración
@@ -16,4 +17,12 @@ Para ejecutar las pruebas unitarias:
 
 ```bash
 pytest
+
+## Instalación
+
+Instala las dependencias necesarias ejecutando:
+
+```bash
+pip install -r requirements.txt
+
 ```
