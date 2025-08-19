@@ -1,5 +1,6 @@
 import json
 import os
+import hashlib
 from typing import Dict, List, Tuple, Optional
 
 import faiss
@@ -41,6 +42,12 @@ def _embed_text(text: str) -> List[float]:
     return model.encode(text).tolist()
 
 
+def _hash_sources(sources: List[Dict[str, str]]) -> str:
+    """Return a stable hash for the provided sources."""
+    payload = json.dumps(sources, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    return hashlib.md5(payload).hexdigest()
+
+
 def build_index(
     sources: List[Dict[str, str]],
     index_file: str = INDEX_FILE,
@@ -62,14 +69,15 @@ def build_index(
                 "text": chunk,
             })
     if not embeddings:
-        dim = 0
-        index = faiss.IndexFlatL2(0)
+        dim = len(_embed_text(""))
+        index = faiss.IndexFlatL2(dim)
     else:
         emb_matrix = np.vstack(embeddings)
         dim = emb_matrix.shape[1]
         index = faiss.IndexFlatL2(dim)
         index.add(emb_matrix)
-    save_index(index, metadata, index_file, meta_file)
+    sources_hash = _hash_sources(sources)
+    save_index(index, metadata, index_file, meta_file, sources_hash=sources_hash, dim=dim)
     return index, metadata
 
 
@@ -78,22 +86,38 @@ def save_index(
     metadata: List[Dict[str, str]],
     index_file: str = INDEX_FILE,
     meta_file: str = META_FILE,
+    *,
+    sources_hash: Optional[str] = None,
+    dim: Optional[int] = None,
 ) -> None:
     """Persist index and metadata to disk."""
     faiss.write_index(index, index_file)
+    meta_payload = {
+        "dim": dim if dim is not None else index.d,
+        "sources_hash": sources_hash,
+        "chunks": metadata,
+    }
     with open(meta_file, "w", encoding="utf-8") as f:
-        json.dump(metadata, f, ensure_ascii=False)
+        json.dump(meta_payload, f, ensure_ascii=False)
 
 
 def load_index(
     index_file: str = INDEX_FILE,
     meta_file: str = META_FILE,
-) -> Tuple[faiss.IndexFlatL2, List[Dict[str, str]]]:
-    """Load index and metadata from disk."""
+) -> Tuple[faiss.IndexFlatL2, List[Dict[str, str]], Optional[int], Optional[str]]:
+    """Load index, metadata and extra info from disk."""
     index = faiss.read_index(index_file)
     with open(meta_file, "r", encoding="utf-8") as f:
-        metadata = json.load(f)
-    return index, metadata
+        meta_payload = json.load(f)
+    if isinstance(meta_payload, dict):
+        metadata = meta_payload.get("chunks", [])
+        dim = meta_payload.get("dim")
+        sources_hash = meta_payload.get("sources_hash")
+    else:
+        metadata = meta_payload
+        dim = None
+        sources_hash = None
+    return index, metadata, dim, sources_hash
 
 
 def ensure_index(
@@ -102,8 +126,16 @@ def ensure_index(
     meta_file: str = META_FILE,
 ) -> Tuple[faiss.IndexFlatL2, List[Dict[str, str]]]:
     """Load existing index or build a new one from sources."""
+    embed_dim = len(_embed_text(""))
+    current_hash = _hash_sources(sources)
     if os.path.exists(index_file) and os.path.exists(meta_file):
-        return load_index(index_file, meta_file)
+        index, metadata, stored_dim, stored_hash = load_index(index_file, meta_file)
+        if index.d != embed_dim or stored_hash != current_hash:
+            index, metadata = build_index(sources, index_file=index_file, meta_file=meta_file)
+        else:
+            if stored_dim != embed_dim or stored_hash is None:
+                save_index(index, metadata, index_file, meta_file, sources_hash=current_hash, dim=embed_dim)
+        return index, metadata
     return build_index(sources, index_file=index_file, meta_file=meta_file)
 
 
