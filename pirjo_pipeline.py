@@ -73,8 +73,6 @@ def extract_sources(files: List[str]) -> List[Dict[str, str]]:
                 )
     return sources
 
-def analista_de_fuentes(title: str, sources: List[Dict[str, str]]) -> str:
-
 
 def analista_de_fuentes(title: str, chunks: List[Dict[str, str]]) -> str:
 
