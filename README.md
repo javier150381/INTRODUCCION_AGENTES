@@ -24,6 +24,8 @@ echo $env:OPENAI_API_KEY
 
 La aplicación mostrará un error si la clave sigue sin configurarse.
 
+Este proyecto fija la dependencia `openai` en la versión `0.28.1` porque el código utiliza la API legacy `ChatCompletion`. Si se migra a la nueva versión (`openai>=1.0.0`), será necesario actualizar las llamadas a la API.
+
 Instala las dependencias necesarias ejecutando:
 
 ```bash
