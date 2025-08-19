@@ -128,9 +128,10 @@ def metodologo_pirjo(bullets: str) -> Dict[str, str]:
 def redactor_academico(blocks: Dict[str, str]) -> str:
     """Create the final introduction from PIRJO blocks."""
     prompt = (
-        "Eres un redactor académico. Con los bloques PIRJO dados en formato JSON, escribe una "
-        "introducción cohesionada de 2-3 párrafos en estilo formal. Asegúrate de incluir las "
-        "citas cuando se proporcionen en los bloques.\n\n" + json.dumps(blocks, ensure_ascii=False)
+        "Eres un redactor académico. Con los bloques PIRJO dados en formato JSON, redacta una "
+        "introducción de cinco párrafos, un párrafo para cada bloque (P, I, R, J y O) y en ese "
+        "orden inalterable. Mantén un estilo formal e incluye las citas cuando se proporcionen."\
+        "\n\n" + json.dumps(blocks, ensure_ascii=False)
     )
     return _call_openai(prompt, system="Agente Redactor Académico")
 
