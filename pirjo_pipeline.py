@@ -1,8 +1,9 @@
 import json
 import os
-from typing import List, Dict
+from typing import Dict, List
 
 from PyPDF2 import PdfReader
+import tiktoken
 
 from openai_utils import ensure_openai_api_key, get_client
 
@@ -22,26 +23,71 @@ def _call_openai(prompt: str, system: str = "") -> str:
     return response.choices[0].message.content.strip()
 
 
+def chunk_text(text: str, chunk_size: int = 700) -> List[str]:
+    """Split text into roughly ``chunk_size``-token fragments.
+
+    The function uses ``tiktoken`` to count tokens with the same encoding
+    as ``gpt-3.5-turbo``. Chunks are created sequentially without overlap and
+    decoded back into strings.
+    """
+
+    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    tokens = encoding.encode(text)
+    if not tokens:
+        return []
+
+    chunks: List[str] = []
+    for i in range(0, len(tokens), chunk_size):
+        chunk_tokens = tokens[i : i + chunk_size]
+        chunks.append(encoding.decode(chunk_tokens))
+    return chunks
+
+
 def extract_sources(files: List[str]) -> List[Dict[str, str]]:
-    """Extract text and citation info from PDF files."""
-    sources = []
+    """Extract text from PDFs and split into token chunks with metadata."""
+
+    sources: List[Dict[str, str]] = []
     for path in files:
         reader = PdfReader(path)
-        for idx, page in enumerate(reader.pages, start=1):
+        for page_number, page in enumerate(reader.pages, start=1):
             text = page.extract_text() or ""
-            sources.append({"file": os.path.basename(path), "page": idx, "text": text})
+            for c_id, chunk in enumerate(chunk_text(text), start=1):
+                sources.append(
+                    {
+                        "file": os.path.basename(path),
+                        "page": page_number,
+                        "chunk_id": c_id,
+                        "text": chunk,
+                    }
+                )
     return sources
 
 
 def analista_de_fuentes(title: str, sources: List[Dict[str, str]]) -> str:
-    """Run the source analysis agent and return bullets with citations."""
-    compiled = "".join(
-        f"[{s['file']}:{s['page']}]\n{s['text']}\n\n" for s in sources if s["text"].strip()
-    )
+    """Run the analysis agent and return bullets with citations.
+
+    Only as many fragments as fit within ``max_tokens`` are included in the prompt
+    sent to the language model, ensuring the request stays within model limits.
+    """
+
+    encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+    max_tokens = 12_000
+    compiled_parts: List[str] = []
+    token_count = 0
+    for s in sources:
+        if not s["text"].strip():
+            continue
+        fragment = f"[{s['file']}:{s['page']}:{s['chunk_id']}]\n{s['text']}\n\n"
+        frag_tokens = len(encoding.encode(fragment))
+        if token_count + frag_tokens > max_tokens:
+            break
+        compiled_parts.append(fragment)
+        token_count += frag_tokens
+    compiled = "".join(compiled_parts)
     prompt = (
         f"Título de investigación: {title}\n\n"
         "A partir de los textos con su cita entre corchetes, extrae conceptos, datos y hallazgos "
-        "relevantes. Responde en viñetas breves y termina cada viñeta con la cita correspondiente."\
+        "relevantes. Responde en viñetas breves y termina cada viñeta con la cita correspondiente."
     ) + "\n\n" + compiled
     return _call_openai(prompt, system="Agente Analista de Fuentes")
 
