@@ -1,6 +1,6 @@
 crewai
 crewai-tools
 gradio
-openai
+openai==0.28.1
 PyPDF2
 python-dotenv
