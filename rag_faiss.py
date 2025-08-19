@@ -1,11 +1,10 @@
 import json
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import faiss
 import numpy as np
-
-from openai_utils import get_client
+from sentence_transformers import SentenceTransformer
 
 INDEX_FILE = "faiss.index"
 META_FILE = "faiss_meta.json"
@@ -25,11 +24,21 @@ def _chunk_text(text: str, chunk_size: int = 500, overlap: int = 50) -> List[str
     return chunks
 
 
+_MODEL: Optional[SentenceTransformer] = None
+
+
+def _get_model() -> SentenceTransformer:
+    """Lazily initialize and return the sentence-transformer model."""
+    global _MODEL
+    if _MODEL is None:
+        _MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+    return _MODEL
+
+
 def _embed_text(text: str) -> List[float]:
-    """Return embedding for ``text`` using OpenAI's small embedding model."""
-    client = get_client()
-    response = client.embeddings.create(model="text-embedding-3-small", input=text)
-    return response.data[0].embedding
+    """Return embedding for ``text`` using a local sentence-transformer model."""
+    model = _get_model()
+    return model.encode(text).tolist()
 
 
 def build_index(
