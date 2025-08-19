@@ -74,7 +74,9 @@ def extract_sources(files: List[str]) -> List[Dict[str, str]]:
     return sources
 
 
-def analista_de_fuentes(title: str, chunks: List[Dict[str, str]]) -> str:
+def analista_de_fuentes(
+    title: str, objective: str, summary: str, chunks: List[Dict[str, str]]
+) -> str:
 
     """Run the analysis agent and return bullets with citations.
 
@@ -102,7 +104,9 @@ def analista_de_fuentes(title: str, chunks: List[Dict[str, str]]) -> str:
     compiled = "".join(compiled_parts)
 
     prompt = (
-        f"Título de investigación: {title}\n\n"
+        f"Título de investigación: {title}\n"
+        f"Objetivo: {objective}\n"
+        f"Resumen: {summary}\n\n"
         "A partir de los textos con su cita entre corchetes, extrae conceptos, datos y hallazgos "
         "relevantes. Responde en viñetas breves y termina cada viñeta con la cita correspondiente."
     ) + "\n\n" + compiled
@@ -146,12 +150,15 @@ def retrieve_relevant_chunks(
     return search_index(title, k, index, metadata)
 
 
-def generate_introduction(title: str, file_paths: List[str]) -> Dict[str, str]:
+def generate_introduction(
+    title: str, objective: str, summary: str, file_paths: List[str]
+) -> Dict[str, str]:
     """Orchestrate the PIRJO pipeline and return results."""
     ensure_openai_api_key()
     sources = extract_sources(file_paths)
-    chunks = retrieve_relevant_chunks(title, sources)
-    bullets = analista_de_fuentes(title, chunks)
+    query = " ".join([title, summary, objective]).strip()
+    chunks = retrieve_relevant_chunks(query, sources)
+    bullets = analista_de_fuentes(title, objective, summary, chunks)
     blocks = metodologo_pirjo(bullets)
     introduction = redactor_academico(blocks)
     return {

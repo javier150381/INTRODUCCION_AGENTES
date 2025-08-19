@@ -2,6 +2,14 @@
 
 Asistente de Introducciones de Investigación (PIRJO). El sistema analiza PDFs proporcionados y genera una introducción académica de cinco párrafos siguiendo los bloques PIRJO (Problema, Información relevante, Restricción, Justificación y Objetivo).
 
+## Resumen
+
+PIRJO analiza PDFs de artículos o tesis y genera de forma automática una introducción académica estructurada en cinco párrafos según los bloques PIRJO.
+
+## Objetivo
+
+Ofrecer una herramienta que agilice la redacción de introducciones de investigación a partir de la información extraída de los documentos proporcionados.
+
 ## Configuración
 
 Este proyecto requiere la variable de entorno `OPENAI_API_KEY` para acceder a la API de OpenAI:
@@ -40,7 +48,7 @@ Ejecuta la aplicación Gradio:
 python main.py
 ```
 
-La interfaz permite ingresar el título del trabajo, subir archivos PDF y obtener la introducción final, los bloques PIRJO intermedios y la lista de documentos procesados.
+La interfaz permite ingresar el título del trabajo, el objetivo, un breve resumen y subir archivos PDF para obtener la introducción final, los bloques PIRJO intermedios y la lista de documentos procesados.
 
 ## Pruebas
 
