@@ -1,5 +1,6 @@
 import json
 import os
+from functools import lru_cache
 from typing import Dict, List
 
 from PyPDF2 import PdfReader
@@ -8,11 +9,18 @@ import tiktoken
 from openai_utils import ensure_openai_api_key, get_client
 from rag_faiss import ensure_index, search_index
 
-client = get_client()
+
+@lru_cache(maxsize=1)
+def _get_client():
+    """Return a cached OpenAI-compatible client."""
+    return get_client()
 
 
-def _call_openai(prompt: str, system: str = "") -> str:
-    """Helper to call OpenAI chat completion and return content."""
+def _call_openai(prompt: str, system: str = "", client=None) -> str:
+    """Helper to call OpenAI chat completion and return content.
+
+    A client is created lazily on first use to avoid side effects at import time.
+    """
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
@@ -20,6 +28,8 @@ def _call_openai(prompt: str, system: str = "") -> str:
     model = "gpt-3.5-turbo"
     if os.getenv("DEEPSEEK_API_KEY") and not os.getenv("OPENAI_API_KEY"):
         model = "deepseek-chat"
+    if client is None:
+        client = _get_client()
     response = client.chat.completions.create(model=model, messages=messages)
     return response.choices[0].message.content.strip()
 
@@ -63,7 +73,11 @@ def extract_sources(files: List[str]) -> List[Dict[str, str]]:
                 )
     return sources
 
+def analista_de_fuentes(title: str, sources: List[Dict[str, str]]) -> str:
+
+
 def analista_de_fuentes(title: str, chunks: List[Dict[str, str]]) -> str:
+
     """Run the analysis agent and return bullets with citations.
 
     Only as many fragments as fit within ``max_tokens`` are included in the prompt
