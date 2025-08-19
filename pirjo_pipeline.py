@@ -72,7 +72,12 @@ def extract_sources(files: List[str]) -> List[Dict[str, str]]:
                     }
                 )
     return sources
+
 def analista_de_fuentes(title: str, sources: List[Dict[str, str]]) -> str:
+
+
+def analista_de_fuentes(title: str, chunks: List[Dict[str, str]]) -> str:
+
     """Run the analysis agent and return bullets with citations.
 
     Only as many fragments as fit within ``max_tokens`` are included in the prompt
@@ -83,10 +88,10 @@ def analista_de_fuentes(title: str, sources: List[Dict[str, str]]) -> str:
     max_tokens = 12_000
     compiled_parts: List[str] = []
     token_count = 0
-    for s in sources:
-        if not s["text"].strip():
+    for c in chunks:
+        if not c["text"].strip():
             continue
-        fragment = f"[{s['file']}:{s['page']}:{s['chunk_id']}]\n{s['text']}\n\n"
+        fragment = f"[{c['file']}:{c['page']}:{c['chunk_id']}]\n{c['text']}\n\n"
         frag_tokens = len(encoding.encode(fragment))
         if token_count + frag_tokens > max_tokens:
             break
