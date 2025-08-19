@@ -1,11 +1,15 @@
 """Entry point for the INTRODUCCION_AGENTES application."""
 
-# Dependencies are managed via requirements.txt.
-# Removed runtime installation: '!pip -q install -U crewai crewai-tools gradio'
+from openai_utils import ensure_openai_api_key
+from app import build_demo
 
-def main():
-    """Run a placeholder CrewAI application."""
-    print("CrewAI app placeholder")
+
+def main() -> None:
+    """Launch the Gradio PIRJO assistant."""
+    ensure_openai_api_key()
+    demo = build_demo()
+    demo.launch()
+
 
 if __name__ == "__main__":
     main()
