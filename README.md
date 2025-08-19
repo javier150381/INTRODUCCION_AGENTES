@@ -10,6 +10,20 @@ Este proyecto requiere la variable de entorno `OPENAI_API_KEY` para acceder a la
 export OPENAI_API_KEY="tu_api_key"
 ```
 
+En PowerShell (Windows) puedes establecerla con:
+
+```powershell
+setx OPENAI_API_KEY "tu_api_key"
+```
+
+Después reinicia la terminal para que el cambio surta efecto. Verifica que la variable esté disponible con:
+
+```powershell
+echo $env:OPENAI_API_KEY
+```
+
+La aplicación mostrará un error si la clave sigue sin configurarse.
+
 Instala las dependencias necesarias ejecutando:
 
 ```bash
