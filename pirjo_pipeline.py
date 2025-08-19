@@ -6,6 +6,7 @@ from PyPDF2 import PdfReader
 import tiktoken
 
 from openai_utils import ensure_openai_api_key, get_client
+from rag_faiss import ensure_index, search_index
 
 client = get_client()
 
@@ -63,6 +64,13 @@ def extract_sources(files: List[str]) -> List[Dict[str, str]]:
     return sources
 
 
+
+def analista_de_fuentes(title: str, chunks: List[Dict[str, str]]) -> str:
+    """Run the source analysis agent over retrieved chunks and return bullets with citations."""
+    compiled = "".join(
+        f"[{c['file']}:{c['page']}]\n{c['text']}\n\n" for c in chunks if c["text"].strip()
+    )
+
 def analista_de_fuentes(title: str, sources: List[Dict[str, str]]) -> str:
     """Run the analysis agent and return bullets with citations.
 
@@ -84,6 +92,7 @@ def analista_de_fuentes(title: str, sources: List[Dict[str, str]]) -> str:
         compiled_parts.append(fragment)
         token_count += frag_tokens
     compiled = "".join(compiled_parts)
+
     prompt = (
         f"Título de investigación: {title}\n\n"
         "A partir de los textos con su cita entre corchetes, extrae conceptos, datos y hallazgos "
@@ -118,11 +127,22 @@ def redactor_academico(blocks: Dict[str, str]) -> str:
     return _call_openai(prompt, system="Agente Redactor Académico")
 
 
+def retrieve_relevant_chunks(
+    title: str,
+    sources: List[Dict[str, str]],
+    k: int = 5,
+) -> List[Dict[str, str]]:
+    """Retrieve ``k`` chunks relevant to ``title`` using a FAISS index."""
+    index, metadata = ensure_index(sources)
+    return search_index(title, k, index, metadata)
+
+
 def generate_introduction(title: str, file_paths: List[str]) -> Dict[str, str]:
     """Orchestrate the PIRJO pipeline and return results."""
     ensure_openai_api_key()
     sources = extract_sources(file_paths)
-    bullets = analista_de_fuentes(title, sources)
+    chunks = retrieve_relevant_chunks(title, sources)
+    bullets = analista_de_fuentes(title, chunks)
     blocks = metodologo_pirjo(bullets)
     introduction = redactor_academico(blocks)
     return {
