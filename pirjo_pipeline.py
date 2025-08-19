@@ -2,12 +2,11 @@ import json
 import os
 from typing import List, Dict
 
-from openai import OpenAI
 from PyPDF2 import PdfReader
 
-from openai_utils import ensure_openai_api_key
+from openai_utils import ensure_openai_api_key, get_client
 
-client = OpenAI()
+client = get_client()
 
 
 def _call_openai(prompt: str, system: str = "") -> str:
@@ -16,7 +15,10 @@ def _call_openai(prompt: str, system: str = "") -> str:
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
-    response = client.chat.completions.create(model="gpt-3.5-turbo", messages=messages)
+    model = "gpt-3.5-turbo"
+    if os.getenv("DEEPSEEK_API_KEY") and not os.getenv("OPENAI_API_KEY"):
+        model = "deepseek-chat"
+    response = client.chat.completions.create(model=model, messages=messages)
     return response.choices[0].message.content.strip()
 
 
