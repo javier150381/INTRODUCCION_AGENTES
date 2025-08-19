@@ -6,6 +6,10 @@ Asistente de Introducciones de Investigación (PIRJO). El sistema analiza PDFs p
 
 PIRJO analiza PDFs de artículos o tesis y genera de forma automática una introducción académica estructurada en cinco párrafos según los bloques PIRJO.
 
+## Detalles de implementación
+
+El módulo `metodologo_pirjo` solicita al modelo un JSON independiente para cada bloque (P, I, R, J y O) y luego combina las respuestas antes de redactar la introducción final.
+
 ## Objetivo
 
 Ofrecer una herramienta que agilice la redacción de introducciones de investigación a partir de la información extraída de los documentos proporcionados.
