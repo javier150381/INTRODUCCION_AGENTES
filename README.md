@@ -1,6 +1,6 @@
 # INTRODUCCION_AGENTES
 
-Asistente de Introducciones de Investigación (PIRJO). El sistema analiza PDFs proporcionados y genera una introducción académica siguiendo los bloques PIRJO (Propósito, Importancia, Relevancia, Justificación, Originalidad).
+Asistente de Introducciones de Investigación (PIRJO). El sistema analiza PDFs proporcionados y genera una introducción académica de cinco párrafos siguiendo los bloques PIRJO (Problema, Información relevante, Restricción, Justificación y Objetivo).
 
 ## Configuración
 
