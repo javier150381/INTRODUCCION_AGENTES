@@ -156,6 +156,16 @@ def redactor_academico(blocks: Dict[str, str]) -> str:
     return _call_openai(prompt, system="Agente Redactor Académico")
 
 
+def revisor_citas_referencias(text: str) -> str:
+    """Review text and ensure citations and references in APA 7 format."""
+    prompt = (
+        "Eres un revisor académico. Verifica que el texto incluya citas en el cuerpo "
+        "y agrega una sección final titulada \"Referencias\" con las entradas en formato APA 7.\n\n"
+        f"Texto:\n{text}"
+    )
+    return _call_openai(prompt, system="Agente Revisor Académico")
+
+
 def retrieve_relevant_chunks(
     title: str,
     sources: List[Dict[str, str]],
@@ -177,6 +187,7 @@ def generate_introduction(
     bullets = analista_de_fuentes(title, objective, summary, chunks)
     blocks = metodologo_pirjo(bullets)
     introduction = redactor_academico(blocks)
+    introduction = revisor_citas_referencias(introduction)
     return {
         "introduction": introduction,
         "blocks": blocks,
