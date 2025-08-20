@@ -153,12 +153,21 @@ def metodologo_pirjo(bullets: str) -> Dict[str, str]:
     }
     results: Dict[str, str] = {}
     for clave, nombre in bloques.items():
-        prompt = (
-            f"Convierte las viñetas siguientes en el bloque {clave} ({nombre}) con 2-3 "
-            f"oraciones claras. Responde estrictamente en JSON con la clave \"{clave}\". "
-            "Mantén las citas entre corchetes exactamente como aparecen.\n\n"
-            f"Viñetas:\n{bullets}"
-        )
+        if clave == "I":
+            prompt = (
+                "Convierte las viñetas siguientes en mini-resúmenes de cada fuente citada "
+                "para el bloque I (Información relevante). Menciona autor y año cuando sea "
+                "posible. Responde estrictamente en JSON con la clave \"I\". Mantén las citas "
+                "entre corchetes exactamente como aparecen.\n\n"
+                f"Viñetas:\n{bullets}"
+            )
+        else:
+            prompt = (
+                f"Convierte las viñetas siguientes en el bloque {clave} ({nombre}) con 2-3 "
+                f"oraciones claras. Responde estrictamente en JSON con la clave \"{clave}\". "
+                "Mantén las citas entre corchetes exactamente como aparecen.\n\n"
+                f"Viñetas:\n{bullets}"
+            )
         system = f"Agente {clave} - {nombre}"
         content = _call_openai(prompt, system=system)
         try:
