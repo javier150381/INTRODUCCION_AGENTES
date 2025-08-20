@@ -17,7 +17,7 @@ def run_pipeline(title: str, objective: str, summary: str, files: List[gr.File])
 
 
 def build_demo() -> gr.Blocks:
-    with gr.Blocks() as demo:
+    with gr.Blocks(css=".scrollable textarea {overflow-y: auto; max-height: 500px;}") as demo:
         gr.Markdown("### Asistente de Introducciones de Investigación (PIRJO)")
         with gr.Row():
             title = gr.Textbox(label="Título del trabajo")
@@ -25,7 +25,13 @@ def build_demo() -> gr.Blocks:
             summary = gr.Textbox(label="Resumen del artículo", lines=2)
             pdfs = gr.File(label="PDFs", file_count="multiple", file_types=[".pdf"])
         btn = gr.Button("Generar Introducción")
-        intro = gr.Textbox(label="Introducción", lines=8)
+        intro = gr.Textbox(
+            label="Introducción",
+            lines=20,
+            max_lines=20,
+            autoscroll=True,
+            elem_classes="scrollable",
+        )
         blocks = gr.Textbox(label="Bloques PIRJO", lines=8)
         files_out = gr.Textbox(label="Archivos procesados")
         btn.click(run_pipeline, inputs=[title, objective, summary, pdfs], outputs=[intro, blocks, files_out])
