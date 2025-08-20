@@ -34,3 +34,19 @@ def test_metodologo_prompt_mentions_citations(monkeypatch):
     monkeypatch.setattr(pirjo_pipeline, "_call_openai", fake_call)
     pirjo_pipeline.metodologo_pirjo("- ejemplo [f:1:1]")
     assert any("citas" in p for p in captured["prompts"])
+
+
+def test_metodologo_prompt_for_I_requests_mini_summaries(monkeypatch):
+    prompts = []
+
+    def fake_call(prompt, system="", client=None):
+        prompts.append(prompt)
+        match = re.search(r"bloque ([PIRJO])", prompt)
+        letter = match.group(1) if match else "X"
+        return json.dumps({letter: letter.lower()})
+
+    monkeypatch.setattr(pirjo_pipeline, "_call_openai", fake_call)
+    pirjo_pipeline.metodologo_pirjo("- ejemplo [f:1:1]")
+
+    i_prompt = prompts[1].lower()
+    assert "mini-res" in i_prompt and "fuente" in i_prompt
