@@ -34,6 +34,39 @@ def run_pipeline(title: str, objective: str, summary: str, files: List[gr.File])
     return result["introduction"], blocks_text, processed
 
 
+def export_to_docx(text: str) -> str:
+    """Generate a DOCX file from the provided text and return its path."""
+    from docx import Document
+    import tempfile
+    import os
+
+    doc = Document()
+    for line in text.split("\n"):
+        doc.add_paragraph(line)
+    tmp_dir = tempfile.mkdtemp()
+    file_path = os.path.join(tmp_dir, "resultado.docx")
+    doc.save(file_path)
+    return file_path
+
+
+def export_to_pdf(text: str) -> str:
+    """Generate a simple PDF file from the provided text and return its path."""
+    from fpdf import FPDF
+    import tempfile
+    import os
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    for line in text.split("\n"):
+        pdf.multi_cell(0, 10, line)
+    tmp_dir = tempfile.mkdtemp()
+    file_path = os.path.join(tmp_dir, "resultado.pdf")
+    pdf.output(file_path)
+    return file_path
+
+
 def build_demo() -> gr.Blocks:
     with gr.Blocks(css=".scrollable textarea {overflow-y: auto; max-height: 500px;}") as demo:
         gr.Markdown("### Asistente de Introducciones de Investigación (PIRJO)")
@@ -44,7 +77,7 @@ def build_demo() -> gr.Blocks:
             pdfs = gr.File(label="PDFs", file_count="multiple", file_types=[".pdf"])
         btn = gr.Button("Generar Introducción")
         intro = gr.Textbox(
-            label="Introducción",
+            label="Resultado final",
             lines=20,
             max_lines=20,
             autoscroll=True,
@@ -52,7 +85,13 @@ def build_demo() -> gr.Blocks:
         )
         blocks = gr.Textbox(label="Bloques PIRJO", lines=8)
         files_out = gr.Textbox(label="Archivos procesados")
+        download_word = gr.File(label="Descargar Word")
+        download_pdf = gr.File(label="Descargar PDF")
+        export_word = gr.Button("Exportar a Word")
+        export_pdf = gr.Button("Exportar a PDF")
         btn.click(run_pipeline, inputs=[title, objective, summary, pdfs], outputs=[intro, blocks, files_out])
+        export_word.click(export_to_docx, inputs=intro, outputs=download_word)
+        export_pdf.click(export_to_pdf, inputs=intro, outputs=download_pdf)
     return demo
 
 

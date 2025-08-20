@@ -11,3 +11,5 @@ numpy
 tiktoken
 
 sentence-transformers
+python-docx
+fpdf2
