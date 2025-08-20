@@ -249,12 +249,27 @@ def verificador_bibliografia(
 
 def retrieve_relevant_chunks(
     title: str,
+    objective: str,
+    summary: str,
     sources: List[Dict[str, str]],
     k: int = 5,
-) -> List[Dict[str, str]]:
-    """Retrieve ``k`` chunks relevant to ``title`` using a FAISS index."""
+) -> Tuple[str, List[Dict[str, str]]]:
+    """Return a summary of prior studies and the supporting chunks.
+
+    This function searches the FAISS index built from ``sources`` using a
+    composite query derived from the research ``title``, ``objective`` and
+    ``summary``. The top ``k`` matching fragments are then analysed by the
+    ``analista_de_fuentes`` agent to extract relevant findings, which are
+    returned as bullet points with citations. Both the bullet string and the
+    underlying chunk metadata are provided so that later stages can verify
+    references.
+    """
+
+    query = " ".join([title, summary, objective]).strip()
     index, metadata = ensure_index(sources)
-    return search_index(title, k, index, metadata)
+    chunks = search_index(query, k, index, metadata)
+    bullets = analista_de_fuentes(title, objective, summary, chunks)
+    return bullets, chunks
 
 
 def generate_introduction(
@@ -263,9 +278,7 @@ def generate_introduction(
     """Orchestrate the PIRJO pipeline and return results."""
     ensure_openai_api_key()
     sources, metadata = extract_sources(file_paths)
-    query = " ".join([title, summary, objective]).strip()
-    chunks = retrieve_relevant_chunks(query, sources)
-    bullets = analista_de_fuentes(title, objective, summary, chunks)
+    bullets, chunks = retrieve_relevant_chunks(title, objective, summary, sources)
     blocks = metodologo_pirjo(bullets)
     blocks = agente_manager(title, objective, blocks)
     introduction = redactor_academico(blocks)
