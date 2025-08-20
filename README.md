@@ -10,6 +10,11 @@ PIRJO analiza PDFs de artículos o tesis y genera de forma automática una intro
 
 El módulo `metodologo_pirjo` solicita al modelo un JSON independiente para cada bloque (P, I, R, J y O) y luego combina las respuestas antes de redactar la introducción final.
 
+Para evitar referencias inventadas, la etapa de revisión se sustituye por un verificador
+que extrae las citas directamente de los fragmentos recuperados en la base FAISS y
+construye una sección de *Referencias* únicamente con los nombres de los PDFs
+utilizados.
+
 ## Objetivo
 
 Ofrecer una herramienta que agilice la redacción de introducciones de investigación a partir de la información extraída de los documentos proporcionados.
