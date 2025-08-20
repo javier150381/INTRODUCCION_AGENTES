@@ -118,8 +118,9 @@ def metodologo_pirjo(bullets: str) -> Dict[str, str]:
 
     Each block (P, I, R, J y O) is requested separately from the language
     model, which must respond with a JSON object containing only the
-    corresponding key. The resulting values are gathered into a single
-    dictionary for downstream use.
+    corresponding key. A dedicated agent role is used for every block to
+    keep responsibilities isolated. The resulting values are gathered into a
+    single dictionary for downstream use.
     """
 
     bloques = {
@@ -137,7 +138,8 @@ def metodologo_pirjo(bullets: str) -> Dict[str, str]:
             "Mantén las citas entre corchetes exactamente como aparecen.\n\n"
             f"Viñetas:\n{bullets}"
         )
-        content = _call_openai(prompt, system="Agente Metodólogo PIRJO")
+        system = f"Agente {clave} - {nombre}"
+        content = _call_openai(prompt, system=system)
         try:
             parsed = json.loads(content)
             results[clave] = parsed.get(clave, content)
@@ -217,6 +219,7 @@ def generate_introduction(
     bullets = analista_de_fuentes(title, objective, summary, chunks)
     blocks = metodologo_pirjo(bullets)
     introduction = redactor_academico(blocks)
+    introduction = revisor_citas_referencias(introduction)
     introduction = verificador_bibliografia(introduction, chunks)
     return {
         "introduction": introduction,
