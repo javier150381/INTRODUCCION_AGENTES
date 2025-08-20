@@ -207,6 +207,17 @@ def redactor_academico(blocks: Dict[str, str]) -> str:
     return _call_openai(prompt, system="Agente Redactor Académico")
 
 
+def redactor_cientifico(blocks: Dict[str, str]) -> str:
+    """Combine PIRJO blocks into a single coherent scientific text."""
+    prompt = (
+        "Une todos los bloques PIRJO proporcionados en el siguiente JSON en un texto "
+        "coherente con estilo de artículo científico. Evita listar las letras de los "
+        "bloques y mantén la redacción en español.\n\n" + json.dumps(blocks, ensure_ascii=False)
+    )
+    system = "Un experto redactor de artículos científicos"
+    return _call_openai(prompt, system=system)
+
+
 def revisor_citas_referencias(text: str) -> str:
     """Review text and ensure citations and references in APA 7 format."""
     prompt = (
@@ -290,7 +301,7 @@ def generate_introduction(
     bullets, chunks = retrieve_relevant_chunks(title, objective, summary, sources)
     blocks = metodologo_pirjo(bullets)
     blocks = agente_manager(title, objective, blocks)
-    introduction = redactor_academico(blocks)
+    introduction = redactor_cientifico(blocks)
     introduction = revisor_citas_referencias(introduction)
     introduction = verificador_bibliografia(introduction, chunks, metadata)
     return {
