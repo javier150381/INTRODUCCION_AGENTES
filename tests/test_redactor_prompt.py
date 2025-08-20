@@ -16,3 +16,4 @@ def test_redactor_prompt_mentions_five_paragraphs(monkeypatch):
     pirjo_pipeline.redactor_academico(blocks)
     assert "cinco párrafos" in captured["prompt"]
     assert "orden inalterable" in captured["prompt"]
+    assert "500 y 700 palabras" in captured["prompt"]
