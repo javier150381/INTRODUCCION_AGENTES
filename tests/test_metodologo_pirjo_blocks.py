@@ -22,3 +22,15 @@ def test_metodologo_pirjo_makes_separate_calls(monkeypatch):
 
     assert len(prompts) == 5
     assert blocks == {k: k.lower() for k in "PIRJO"}
+
+
+def test_metodologo_prompt_mentions_citations(monkeypatch):
+    captured = {}
+
+    def fake_call(prompt, system="", client=None):
+        captured.setdefault("prompts", []).append(prompt)
+        return json.dumps({"P": "p"})
+
+    monkeypatch.setattr(pirjo_pipeline, "_call_openai", fake_call)
+    pirjo_pipeline.metodologo_pirjo("- ejemplo [f:1:1]")
+    assert any("citas" in p for p in captured["prompts"])

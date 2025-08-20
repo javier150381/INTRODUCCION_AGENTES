@@ -133,7 +133,8 @@ def metodologo_pirjo(bullets: str) -> Dict[str, str]:
     for clave, nombre in bloques.items():
         prompt = (
             f"Convierte las viñetas siguientes en el bloque {clave} ({nombre}) con 2-3 "
-            f"oraciones claras. Responde estrictamente en JSON con la clave \"{clave}\".\n\n"
+            f"oraciones claras. Responde estrictamente en JSON con la clave \"{clave}\". "
+            "Mantén las citas entre corchetes exactamente como aparecen.\n\n"
             f"Viñetas:\n{bullets}"
         )
         content = _call_openai(prompt, system="Agente Metodólogo PIRJO")
@@ -166,6 +167,35 @@ def revisor_citas_referencias(text: str) -> str:
     return _call_openai(prompt, system="Agente Revisor Académico")
 
 
+def verificador_bibliografia(text: str, sources: List[Dict[str, str]]) -> str:
+    """Append a reference list based on citations present in ``text``.
+
+    The function searches for citation labels of the form
+    ``[file:page:chunk]`` and only includes those that match the provided
+    ``sources``. The reference list simply enumerates the unique file names
+    used in the citations to ensure no bibliographic entries are invented.
+    """
+
+    import re
+
+    pattern = r"\[([^\[\]]+)\]"
+    citations = re.findall(pattern, text)
+    valid_keys = {
+        f"{s['file']}:{s['page']}:{s.get('chunk_id', s.get('chunk', ''))}"
+        for s in sources
+    }
+    used_files: List[str] = []
+    for cit in citations:
+        if cit in valid_keys:
+            file = cit.split(":")[0]
+            if file not in used_files:
+                used_files.append(file)
+    if not used_files:
+        return text
+    refs = "\n".join(f"- {f}" for f in used_files)
+    return f"{text}\n\nReferencias\n{refs}"
+
+
 def retrieve_relevant_chunks(
     title: str,
     sources: List[Dict[str, str]],
@@ -187,7 +217,7 @@ def generate_introduction(
     bullets = analista_de_fuentes(title, objective, summary, chunks)
     blocks = metodologo_pirjo(bullets)
     introduction = redactor_academico(blocks)
-    introduction = revisor_citas_referencias(introduction)
+    introduction = verificador_bibliografia(introduction, chunks)
     return {
         "introduction": introduction,
         "blocks": blocks,
