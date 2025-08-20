@@ -1,7 +1,7 @@
 import json
 import os
 from functools import lru_cache
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from PyPDF2 import PdfReader
 import tiktoken
@@ -54,24 +54,45 @@ def chunk_text(text: str, chunk_size: int = 700) -> List[str]:
     return chunks
 
 
-def extract_sources(files: List[str]) -> List[Dict[str, str]]:
-    """Extract text from PDFs and split into token chunks with metadata."""
+def _parse_year(date_str: str) -> str:
+    """Extract a year from a PDF metadata date string."""
+    if not date_str:
+        return ""
+    digits = "".join(ch for ch in date_str if ch.isdigit())
+    return digits[:4]
+
+
+def extract_sources(files: List[str]) -> Tuple[List[Dict[str, str]], Dict[str, Dict[str, str]]]:
+    """Extract text and metadata from PDFs.
+
+    Returns a tuple ``(sources, metadata)`` where ``sources`` contains token
+    chunks with citation information and ``metadata`` maps file names to basic
+    bibliographic fields (author, title, year).
+    """
 
     sources: List[Dict[str, str]] = []
+    metadata: Dict[str, Dict[str, str]] = {}
     for path in files:
         reader = PdfReader(path)
+        info = reader.metadata or {}
+        fname = os.path.basename(path)
+        metadata[fname] = {
+            "author": info.get("/Author", ""),
+            "title": info.get("/Title", os.path.splitext(fname)[0]),
+            "year": _parse_year(info.get("/CreationDate", "")),
+        }
         for page_number, page in enumerate(reader.pages, start=1):
             text = page.extract_text() or ""
             for c_id, chunk in enumerate(chunk_text(text), start=1):
                 sources.append(
                     {
-                        "file": os.path.basename(path),
+                        "file": fname,
                         "page": page_number,
                         "chunk_id": c_id,
                         "text": chunk,
                     }
                 )
-    return sources
+    return sources, metadata
 
 
 def analista_de_fuentes(
@@ -148,13 +169,31 @@ def metodologo_pirjo(bullets: str) -> Dict[str, str]:
     return results
 
 
+def agente_manager(title: str, objective: str, blocks: Dict[str, str]) -> Dict[str, str]:
+    """Ensure PIRJO blocks align with title and objective."""
+    prompt = (
+        f"Título: {title}\nObjetivo: {objective}\n\n"
+        "Revisa la coherencia de los siguientes bloques PIRJO con el título y el objetivo. "
+        "Si detectas inconsistencias, corrígelas. Responde en JSON con las claves P, I, R, J y O.\n\n"
+        f"Bloques:\n{json.dumps(blocks, ensure_ascii=False)}"
+    )
+    system = "Agente Manager"
+    content = _call_openai(prompt, system=system)
+    try:
+        parsed = json.loads(content)
+        return {k: parsed.get(k, blocks.get(k, "")) for k in blocks}
+    except json.JSONDecodeError:
+        return blocks
+
+
 def redactor_academico(blocks: Dict[str, str]) -> str:
     """Create the final introduction from PIRJO blocks."""
     prompt = (
         "Eres un redactor académico. Con los bloques PIRJO dados en formato JSON, redacta una "
         "introducción de cinco párrafos, un párrafo para cada bloque (P, I, R, J y O) y en ese "
-        "orden inalterable. Mantén un estilo formal e incluye las citas cuando se proporcionen."\
-        "\n\n" + json.dumps(blocks, ensure_ascii=False)
+        "orden inalterable. Mantén un estilo formal, incluye las citas cuando se proporcionen y "
+        "asegúrate de que el texto completo tenga entre 500 y 700 palabras.\n\n"
+        + json.dumps(blocks, ensure_ascii=False)
     )
     return _call_openai(prompt, system="Agente Redactor Académico")
 
@@ -169,13 +208,15 @@ def revisor_citas_referencias(text: str) -> str:
     return _call_openai(prompt, system="Agente Revisor Académico")
 
 
-def verificador_bibliografia(text: str, sources: List[Dict[str, str]]) -> str:
+def verificador_bibliografia(
+    text: str, sources: List[Dict[str, str]], metadata: Dict[str, Dict[str, str]]
+) -> str:
     """Append a reference list based on citations present in ``text``.
 
-    The function searches for citation labels of the form
-    ``[file:page:chunk]`` and only includes those that match the provided
-    ``sources``. The reference list simply enumerates the unique file names
-    used in the citations to ensure no bibliographic entries are invented.
+    The function searches for citation labels of the form ``[file:page:chunk]``
+    and only includes those that match the provided ``sources``. Bibliographic
+    entries are formatted using metadata extracted from the PDFs to avoid
+    inventing references.
     """
 
     import re
@@ -194,7 +235,15 @@ def verificador_bibliografia(text: str, sources: List[Dict[str, str]]) -> str:
                 used_files.append(file)
     if not used_files:
         return text
-    refs = "\n".join(f"- {f}" for f in used_files)
+
+    def _format_apa(fname: str) -> str:
+        meta = metadata.get(fname, {})
+        author = meta.get("author") or "s.a."
+        year = meta.get("year") or "s.f."
+        title = meta.get("title") or fname
+        return f"{author} ({year}). {title}."
+
+    refs = "\n".join(f"- {_format_apa(f)}" for f in used_files)
     return f"{text}\n\nReferencias\n{refs}"
 
 
@@ -213,14 +262,15 @@ def generate_introduction(
 ) -> Dict[str, str]:
     """Orchestrate the PIRJO pipeline and return results."""
     ensure_openai_api_key()
-    sources = extract_sources(file_paths)
+    sources, metadata = extract_sources(file_paths)
     query = " ".join([title, summary, objective]).strip()
     chunks = retrieve_relevant_chunks(query, sources)
     bullets = analista_de_fuentes(title, objective, summary, chunks)
     blocks = metodologo_pirjo(bullets)
+    blocks = agente_manager(title, objective, blocks)
     introduction = redactor_academico(blocks)
     introduction = revisor_citas_referencias(introduction)
-    introduction = verificador_bibliografia(introduction, chunks)
+    introduction = verificador_bibliografia(introduction, chunks, metadata)
     return {
         "introduction": introduction,
         "blocks": blocks,
