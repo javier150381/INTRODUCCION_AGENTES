@@ -1,7 +1,7 @@
 import json
 import os
 from functools import lru_cache
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from PyPDF2 import PdfReader
 import tiktoken
@@ -216,6 +216,41 @@ def redactor_cientifico(blocks: Dict[str, str]) -> str:
     )
     system = "Un experto redactor de artículos científicos"
     return _call_openai(prompt, system=system)
+
+
+def unir_bloques_pirjo(raw_blocks: Dict[str, Any]) -> Dict[str, str]:
+    """Flatten a PIRJO JSON with subkeys into single text blocks.
+
+    The input may contain keys like ``P2`` or nested dictionaries with
+    summaries. This function groups values by their leading letter and
+    concatenates all textual contents so that downstream agents receive
+    one string per PIRJO block.
+    """
+
+    grouped: Dict[str, List[str]] = {"P": [], "I": [], "R": [], "J": [], "O": []}
+
+    def _collect(key: str, value: Any) -> None:
+        if isinstance(value, str):
+            if key in grouped:
+                grouped[key].append(value)
+        elif isinstance(value, dict):
+            for v in value.values():
+                _collect(key, v)
+        elif isinstance(value, list):
+            for v in value:
+                _collect(key, v)
+
+    for k, v in raw_blocks.items():
+        base = k[0].upper()
+        _collect(base, v)
+
+    return {k: " ".join(parts).strip() for k, parts in grouped.items() if parts}
+
+
+def redactor_desde_json(raw_blocks: Dict[str, Any]) -> str:
+    """Redact a coherent text from a nested PIRJO JSON structure."""
+    merged = unir_bloques_pirjo(raw_blocks)
+    return redactor_cientifico(merged)
 
 
 def revisor_citas_referencias(text: str) -> str:
